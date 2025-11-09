@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { Footer } from "./index";
 import { SOCIAL_LINKS } from "../constants/data";
+import { Footer } from "./index";
 
 describe("Footer Component", () => {
   it("renders without crashing", () => {

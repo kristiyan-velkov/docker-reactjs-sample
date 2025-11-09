@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { Features } from "./index";
 import { FEATURES } from "../constants/data";
+import { Features } from "./index";
 
 describe("Features Component", () => {
   it("renders without crashing", () => {

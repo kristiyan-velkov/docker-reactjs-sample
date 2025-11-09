@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { CommandsTab } from "./index";
 import { DOCKER_COMMANDS } from "../constants/data";
+import { CommandsTab } from "./index";
 
 describe("CommandsTab Component", () => {
   it("renders without crashing", () => {

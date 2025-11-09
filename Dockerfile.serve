@@ -1,0 +1,70 @@
+# This Dockerfile is used to serve the React.js application using the Vercel serve npm package.
+
+# =========================================
+# Stage 1: Serve the React.js Application
+# =========================================
+
+# Define Node.js version
+ARG NODE_VERSION=24.11.0
+
+# -----------------------------------------------------------------------------
+# 1. BASE STAGE — Common setup
+# -----------------------------------------------------------------------------
+FROM node:${NODE_VERSION}-alpine AS base
+
+# Set working directory
+WORKDIR /app
+
+# Copy dependency manifests
+COPY package*.json ./
+
+# -----------------------------------------------------------------------------
+# Stage 2: DEPENDENCIES STAGE — Install only production dependencies
+# -----------------------------------------------------------------------------
+FROM base AS deps
+
+# Use BuildKit cache to speed up npm installs
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --omit=dev
+
+# -----------------------------------------------------------------------------
+# Stage 3: BUILD STAGE — Install all dependencies and build the app
+# -----------------------------------------------------------------------------
+FROM base AS build
+
+# Install all dependencies (including devDependencies)
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
+
+# Copy the rest of the project files
+COPY . .
+
+# Build the production bundle
+RUN npm run build
+
+# -----------------------------------------------------------------------------
+# Stage 4: FINAL STAGE — Minimal runtime image
+# -----------------------------------------------------------------------------
+FROM node:${NODE_VERSION}-alpine AS final
+
+# Set environment variables for production
+ENV NODE_ENV=production
+
+# Set working directory
+WORKDIR /app
+
+# Installing globally requires root access, so do this before USER node
+RUN npm install -g serve
+
+
+# Switch to a non-root user for security
+USER node
+
+# Copy only the built app from the build stage
+COPY --from=build /app/dist /app/build
+
+# Expose port 8080 for the static server
+EXPOSE 8080
+
+# Start the static file server
+CMD ["serve", "-s", "build", "-l", "8080"]

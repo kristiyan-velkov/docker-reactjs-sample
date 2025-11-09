@@ -42,7 +42,7 @@ Part of the [official Docker React.js sample](https://docs.docker.com/guides/rea
 
 - [Docker](https://www.docker.com/get-started) (v20.10+)
 - [Docker Compose](https://docs.docker.com/compose/install/) (v2.0+)
-- [Node.js](https://nodejs.org/) (v18+) - for local development
+- [Node.js](https://nodejs.org/) (v24+) - for local development
 - [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/) - for local development
 
 ## 🚀 Quick Start

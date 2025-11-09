@@ -12,12 +12,9 @@ updates:
       time: "09:00"
       timezone: "UTC"
     open-pull-requests-limit: 5
-    reviewers:
-      - "kristiyanvelkov"
-    assignees:
-      - "kristiyanvelkov"
     labels:
       - "dependencies"
+      - "npm"
       - "automated"
     commit-message:
       prefix: "chore"
@@ -57,8 +54,6 @@ updates:
       time: "09:00"
       timezone: "UTC"
     open-pull-requests-limit: 3
-    reviewers:
-      - "kristiyanvelkov"
     labels:
       - "github-actions"
       - "dependencies"
@@ -81,8 +76,6 @@ updates:
       time: "09:00"
       timezone: "UTC"
     open-pull-requests-limit: 3
-    reviewers:
-      - "kristiyanvelkov"
     labels:
       - "docker"
       - "dependencies"
@@ -90,4 +83,3 @@ updates:
     commit-message:
       prefix: "build"
       include: "scope"
-

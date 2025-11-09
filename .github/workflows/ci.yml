@@ -12,22 +12,44 @@ concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}
     cancel-in-progress: true
 
+# Required permissions for all jobs
+permissions:
+    contents: read
+    pull-requests: write
+    checks: write
+    security-events: write
+
 jobs:
     # Run all CI checks in parallel
     lint:
         name: Code Quality
         uses: ./.github/workflows/lint.yml
+        permissions:
+            contents: read
+            pull-requests: write
+            checks: write
+            
     test:
         name: Tests & Coverage
         uses: ./.github/workflows/test.yml
+        permissions:
+            contents: read
+            pull-requests: write
+            
     build:
         name: Build Validation
         uses: ./.github/workflows/build.yml
+        permissions:
+            contents: read
 
     security:
         name: Security Checks
         uses: ./.github/workflows/security.yml
         if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+        permissions:
+            contents: read
+            pull-requests: write
+            security-events: write
 
     # Final validation step
     ci-success:

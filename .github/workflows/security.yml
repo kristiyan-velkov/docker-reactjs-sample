@@ -87,19 +87,34 @@ jobs:
       actions: read
 
     steps:
+      - name: Check for Snyk Token
+        id: check_token
+        run: |
+          if [ -z "${{ secrets.SNYK_TOKEN }}" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "⚠️  SNYK_TOKEN not set. Skipping Snyk scan."
+            echo "To enable Snyk scanning, add SNYK_TOKEN to repository secrets."
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout code
+        if: steps.check_token.outputs.skip == 'false'
         uses: actions/checkout@v4
 
       - name: Setup Node.js
+        if: steps.check_token.outputs.skip == 'false'
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
 
       - name: Install dependencies
+        if: steps.check_token.outputs.skip == 'false'
         run: npm ci
 
       - name: Run Snyk to check for vulnerabilities
+        if: steps.check_token.outputs.skip == 'false'
         uses: snyk/actions/node@master
         continue-on-error: true
         env:
@@ -108,8 +123,8 @@ jobs:
           args: --severity-threshold=high --sarif-file-output=snyk.sarif
 
       - name: Upload Snyk results to GitHub Security
+        if: steps.check_token.outputs.skip == 'false' && always()
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
         with:
           sarif_file: snyk.sarif
           category: snyk

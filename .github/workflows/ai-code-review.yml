@@ -20,15 +20,29 @@ jobs:
     ai-review:
         name: AI-Powered Code Review
         runs-on: ubuntu-latest
-        if: github.event_name == 'pull_request' || github.event_name == 'pull_request_review_comment'
+        if: |
+            (github.event_name == 'pull_request' || github.event_name == 'pull_request_review_comment') &&
+            github.event.repository.private == false
 
         steps:
+            - name: Check for OpenAI API Key
+              id: check_key
+              run: |
+                  if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
+                      echo "skip=true" >> $GITHUB_OUTPUT
+                      echo "⚠️  OPENAI_API_KEY not set. Skipping AI review."
+                  else
+                      echo "skip=false" >> $GITHUB_OUTPUT
+                  fi
+
             - name: Checkout code
+              if: steps.check_key.outputs.skip == 'false'
               uses: actions/checkout@v4
               with:
                   fetch-depth: 0
 
             - name: AI Code Review with GPT
+              if: steps.check_key.outputs.skip == 'false'
               uses: anc95/ChatGPT-CodeReview@main
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -64,10 +78,23 @@ jobs:
     coderabbit-review:
         name: CodeRabbit AI Review
         runs-on: ubuntu-latest
-        if: github.event_name == 'pull_request'
+        if: |
+            github.event_name == 'pull_request' &&
+            github.event.repository.private == false
 
         steps:
+            - name: Check for OpenAI API Key
+              id: check_key
+              run: |
+                  if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
+                      echo "skip=true" >> $GITHUB_OUTPUT
+                      echo "⚠️  OPENAI_API_KEY not set. Skipping CodeRabbit review."
+                  else
+                      echo "skip=false" >> $GITHUB_OUTPUT
+                  fi
+
             - name: CodeRabbit AI Review
+              if: steps.check_key.outputs.skip == 'false'
               uses: coderabbitai/ai-pr-reviewer@latest
               env:
                   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

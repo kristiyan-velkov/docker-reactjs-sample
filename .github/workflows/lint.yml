@@ -35,7 +35,7 @@ jobs:
         with:
           reporter: github-pr-review
           eslint_flags: "."
-          fail_on_error: true
+          fail_level: error
           filter_mode: nofilter
 
       - name: Success message

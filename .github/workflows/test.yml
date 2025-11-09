@@ -41,6 +41,41 @@ jobs:
           vite-config-path: ./vite.config.ts
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Coverage Summary to Step Summary
+        if: always()
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            echo "## 📊 Test Coverage Report" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Parse coverage data
+            STATEMENTS=$(jq -r '.total.statements.pct' coverage/coverage-summary.json)
+            BRANCHES=$(jq -r '.total.branches.pct' coverage/coverage-summary.json)
+            FUNCTIONS=$(jq -r '.total.functions.pct' coverage/coverage-summary.json)
+            LINES=$(jq -r '.total.lines.pct' coverage/coverage-summary.json)
+            
+            echo "| Metric | Coverage | Status |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|----------|--------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Statements | ${STATEMENTS}% | $([ "$STATEMENTS" = "100" ] && echo "✅" || echo "⚠️") |" >> $GITHUB_STEP_SUMMARY
+            echo "| Branches | ${BRANCHES}% | $([ "$BRANCHES" = "100" ] && echo "✅" || echo "⚠️") |" >> $GITHUB_STEP_SUMMARY
+            echo "| Functions | ${FUNCTIONS}% | $([ "$FUNCTIONS" = "100" ] && echo "✅" || echo "⚠️") |" >> $GITHUB_STEP_SUMMARY
+            echo "| Lines | ${LINES}% | $([ "$LINES" = "100" ] && echo "✅" || echo "⚠️") |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            if [ "$STATEMENTS" = "100" ] && [ "$BRANCHES" = "100" ] && [ "$FUNCTIONS" = "100" ] && [ "$LINES" = "100" ]; then
+              echo "🎉 **Perfect! 100% code coverage achieved!**" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "⚠️  Coverage is below 100% threshold" >> $GITHUB_STEP_SUMMARY
+            fi
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Detailed coverage report:**" >> $GITHUB_STEP_SUMMARY
+            echo "- Check the 'Vitest Coverage Report' step above for file-by-file details" >> $GITHUB_STEP_SUMMARY
+            echo "- Download the coverage artifact for interactive HTML report" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️  Coverage report not found" >> $GITHUB_STEP_SUMMARY
+          fi
+
       - name: Archive coverage report
         uses: actions/upload-artifact@v4
         if: always()

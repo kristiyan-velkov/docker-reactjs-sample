@@ -22,3 +22,9 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     command: ["npm", "run", "test:coverage"]
+
+  react-lint:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: ["npm", "run", "lint"]

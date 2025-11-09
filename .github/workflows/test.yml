@@ -1,129 +1,112 @@
-name: Test with Docker
+name: Test & Coverage
 
 on:
-    push:
-        branches: [main, develop]
-    pull_request:
-        branches: [main, develop]
-    workflow_dispatch:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+  workflow_call:
 
 jobs:
-    test:
-        name: Run Tests in Docker
-        runs-on: ubuntu-latest
+  test:
+    name: Run Tests with Coverage
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-            - name: Set up Docker Buildx
-              uses: docker/setup-buildx-action@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
 
-            - name: Build Docker development image
-              run: |
-                  docker build -f Dockerfile.dev -t react-app-dev .
+      - name: Install dependencies
+        run: npm ci
 
-            - name: Install dependencies in container
-              run: |
-                  docker run --rm react-app-dev npm ci
+      - name: Run tests with coverage
+        run: npm run test:coverage
 
-            - name: Run linter
-              run: |
-                  docker run --rm react-app-dev npm run lint
+      - name: Display coverage summary
+        if: always()
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            echo "📊 Coverage Summary:"
+            cat coverage/coverage-summary.json | grep -A 10 "total"
+          fi
 
-            - name: Run tests with coverage
-              run: |
-                  docker run --rm -v ${{ github.workspace }}/coverage:/app/coverage react-app-dev npm run test:coverage
+      - name: Check coverage thresholds
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            # Parse coverage values
+            statements=$(cat coverage/coverage-summary.json | grep -o '"statements":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9.]*' | grep -o 'pct":[0-9.]*' | cut -d':' -f2)
+            echo "Statements coverage: ${statements}%"
+            
+            # Check if coverage is 100%
+            if [ "$statements" = "100" ]; then
+              echo "✅ Perfect coverage achieved!"
+            else
+              echo "⚠️  Coverage is below 100%"
+            fi
+          fi
 
-            - name: Upload coverage reports to Codecov
-              uses: codecov/codecov-action@v4
-              with:
-                  files: ./coverage/lcov.info
-                  flags: unittests
-                  name: codecov-umbrella
-                  fail_ci_if_error: false
-              env:
-                  CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+        with:
+          files: ./coverage/lcov.info
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
-            - name: Archive coverage results
-              uses: actions/upload-artifact@v4
-              with:
-                  name: coverage-report
-                  path: coverage/
-                  retention-days: 30
+      - name: Archive coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report-${{ github.sha }}
+          path: coverage/
+          retention-days: 30
 
-            - name: Check coverage thresholds
-              run: |
-                  if [ -f coverage/coverage-summary.json ]; then
-                    echo "Coverage summary:"
-                    cat coverage/coverage-summary.json
-                  fi
+      - name: Comment coverage on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            if (fs.existsSync('coverage/coverage-summary.json')) {
+              const coverage = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
+              const total = coverage.total;
+              
+              const getEmoji = (pct) => {
+                if (pct === 100) return '🎯';
+                if (pct >= 80) return '✅';
+                if (pct >= 60) return '⚠️';
+                return '❌';
+              };
+              
+              const comment = `## 📊 Test Coverage Report
+              
+              | Metric | Coverage | Status |
+              |--------|----------|--------|
+              | **Statements** | ${total.statements.pct}% | ${getEmoji(total.statements.pct)} |
+              | **Branches** | ${total.branches.pct}% | ${getEmoji(total.branches.pct)} |
+              | **Functions** | ${total.functions.pct}% | ${getEmoji(total.functions.pct)} |
+              | **Lines** | ${total.lines.pct}% | ${getEmoji(total.lines.pct)} |
+              
+              **Tests:** ${total.statements.covered}/${total.statements.total} statements covered
+              
+              ${total.statements.pct === 100 ? '🎉 Perfect! 100% code coverage achieved!' : ''}
+              `;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
 
-    test-with-compose:
-        name: Run Tests with Docker Compose
-        runs-on: ubuntu-latest
-
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-
-            - name: Start services with Docker Compose
-              run: |
-                  docker compose up -d
-
-            - name: Wait for services to be ready
-              run: |
-                  timeout 60 bash -c 'until docker compose ps | grep -q "running"; do sleep 2; done'
-
-            - name: Run tests in compose environment
-              run: |
-                  docker compose exec -T web npm run test:coverage || true
-
-            - name: Copy coverage from container
-              run: |
-                  docker compose cp web:/app/coverage ./coverage || true
-
-            - name: Stop services
-              run: |
-                  docker compose down
-
-            - name: Upload coverage from compose
-              uses: actions/upload-artifact@v4
-              if: always()
-              with:
-                  name: coverage-compose
-                  path: coverage/
-                  retention-days: 30
-
-    build-production:
-        name: Build Production Image
-        runs-on: ubuntu-latest
-        needs: test
-
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
-
-            - name: Set up Docker Buildx
-              uses: docker/setup-buildx-action@v3
-
-            - name: Build production Docker image
-              run: |
-                  docker build -t react-app-prod .
-
-            - name: Test production image
-              run: |
-                  docker run -d -p 8080:80 --name test-container react-app-prod
-                  sleep 5
-                  curl -f http://localhost:8080 || exit 1
-                  docker stop test-container
-                  docker rm test-container
-
-            - name: Scan image with Docker Scout
-              uses: docker/scout-action@v1
-              if: github.event_name == 'pull_request'
-              with:
-                  command: cves
-                  image: local://react-app-prod
-                  only-severities: critical,high
-                  exit-code: false

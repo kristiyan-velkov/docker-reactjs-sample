@@ -1,4 +1,11 @@
 services:
+  react-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: docker-reactjs-sample
+    ports:
+      - "8080:8080"
   react-dev:
     build:
       context: .
@@ -10,17 +17,8 @@ services:
         - action: sync
           path: .
           target: /app
-
-  react-prod:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: docker-reactjs-sample
-    ports:
-      - "8080:8080"
-
   react-test:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    command: ["npm", "run", "test"]
+    command: ["npm", "run", "test:coverage"]

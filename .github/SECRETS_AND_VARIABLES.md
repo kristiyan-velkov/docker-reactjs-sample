@@ -77,9 +77,17 @@ If you want to deploy images to Docker Hub, you need these secrets:
 
 **Impact if not set:**
 
-- CI workflows (lint, test, build, security) will work fine
+- CI workflows (lint, test, build) will work fine
+- Security workflow will work with limitations (Docker Scout may fail)
 - Only CD workflow (deployment) will fail
 - You can skip these if you don't need to push images to Docker Hub
+
+**Docker Scout Note:**
+
+- Docker Scout requires authentication to work properly
+- The same `DOCKER_USERNAME` and `DOCKERHUB_TOKEN` are used for Scout
+- Without these secrets, Scout will show "not entitled" error
+- The workflow continues with graceful fallback (doesn't block CI)
 
 ---
 
@@ -486,11 +494,13 @@ git push origin v1.0.0
 | Secret                   | Required    | Used By            | Purpose                     | Get From            |
 | ------------------------ | ----------- | ------------------ | --------------------------- | ------------------- |
 | `GITHUB_TOKEN`           | ✅ Auto     | All workflows      | GitHub API access           | Automatic           |
-| `DOCKER_USERNAME`        | ✅ For CD   | cd.yml             | Docker Hub login            | hub.docker.com      |
-| `DOCKERHUB_TOKEN`        | ✅ For CD   | cd.yml             | Docker Hub push access      | hub.docker.com      |
+| `DOCKER_USERNAME`        | ✅ For CD   | cd.yml, security.yml | Docker Hub login          | hub.docker.com      |
+| `DOCKERHUB_TOKEN`        | ✅ For CD   | cd.yml, security.yml | Docker Hub push access    | hub.docker.com      |
 | `DOCKERHUB_PROJECT_NAME` | ✅ For CD   | cd.yml             | Docker Hub project name     | hub.docker.com      |
 | `SNYK_TOKEN`             | ⚠️ Optional | security.yml       | Snyk vulnerability scanning | snyk.io             |
 | `OPENAI_API_KEY`         | ⚠️ Optional | ai-code-review.yml | AI-powered code reviews     | platform.openai.com |
+
+> **Note:** `DOCKER_USERNAME` and `DOCKERHUB_TOKEN` are also used by `security.yml` to authenticate Docker Scout scans.
 
 ---
 

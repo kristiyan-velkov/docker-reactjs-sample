@@ -1,7 +1,7 @@
 import { useState } from "react";
-import type { TabType } from "../types";
-import { OverviewTab } from "./OverviewTab";
 import { CommandsTab } from "./CommandsTab";
+import { OverviewTab } from "./OverviewTab";
+import type { TabType } from "../types";
 
 export const QuickStart = () => {
   const [activeTab, setActiveTab] = useState<TabType>("overview");

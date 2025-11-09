@@ -1,0 +1,30 @@
+services:
+  react-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: docker-reactjs-sample
+    ports:
+      - "8080:8080"
+  react-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    develop:
+      watch:
+        - action: sync
+          path: .
+          target: /app
+  react-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: ["npm", "run", "test:coverage"]
+
+  react-lint:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: ["npm", "run", "lint"]

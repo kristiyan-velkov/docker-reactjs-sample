@@ -1,5 +1,5 @@
-import { CommandCard } from "./CommandCard";
 import { DOCKER_COMMANDS } from "../constants/data";
+import { CommandCard } from "./CommandCard";
 
 export const CommandsTab = () => {
   return (

@@ -1,0 +1,105 @@
+name: Build & Validate
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  build-production:
+    name: Build Production Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Cache Docker layers
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-prod-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-prod-
+
+      - name: Build production image
+        run: docker compose build react-prod
+
+      - name: Start production container
+        run: |
+          docker compose up -d react-prod
+          sleep 5
+
+      - name: Test production deployment
+        run: |
+          # Check if container is running
+          if [ "$(docker compose ps react-prod | grep -c 'Up')" -eq 0 ]; then
+            echo "❌ Production container failed to start"
+            docker compose logs react-prod
+            exit 1
+          fi
+
+          # Test HTTP endpoint
+          echo "Testing production endpoint..."
+          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080)
+
+          if [ "$response" = "200" ]; then
+            echo "✅ Production deployment successful (HTTP $response)"
+          else
+            echo "❌ Production deployment failed (HTTP $response)"
+            docker compose logs react-prod
+            exit 1
+          fi
+
+      - name: Verify static assets
+        run: |
+          echo "🔍 Verifying static assets..."
+
+          # Check if key assets are accessible
+          assets=(
+            "/"
+            "/vite.svg"
+          )
+
+          failed=0
+          for asset in "${assets[@]}"; do
+            if curl -f "http://localhost:8080$asset" > /dev/null 2>&1; then
+              echo "✅ Asset accessible: $asset"
+            else
+              echo "❌ Asset not found: $asset"
+              failed=1
+            fi
+          done
+
+          if [ $failed -eq 1 ]; then
+            exit 1
+          fi
+
+      - name: Check nginx configuration
+        run: |
+          echo "🔍 Checking nginx configuration..."
+          docker compose exec react-prod nginx -t || true
+
+      - name: Export production image
+        run: |
+          docker save $(docker compose images -q react-prod) -o prod-image.tar
+          ls -lh prod-image.tar
+
+      - name: Upload production image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-image-${{ github.sha }}
+          path: prod-image.tar
+          retention-days: 7
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down

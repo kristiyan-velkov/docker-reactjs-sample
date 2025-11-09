@@ -1,0 +1,140 @@
+name: AI Code Review
+
+on:
+    pull_request:
+        branches: [main, develop]
+        types: [opened, synchronize, reopened]
+    pull_request_review_comment:
+        types: [created]
+    workflow_dispatch:
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+permissions:
+    contents: read
+    pull-requests: write
+
+jobs:
+    ai-review:
+        name: AI-Powered Code Review
+        runs-on: ubuntu-latest
+        if: github.event_name == 'pull_request' || github.event_name == 'pull_request_review_comment'
+
+        steps:
+            - name: Check for OpenAI API Key
+              id: check_key
+              run: |
+                  if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
+                      echo "skip=true" >> $GITHUB_OUTPUT
+                      echo "⚠️  OPENAI_API_KEY not set. Skipping AI review."
+                  else
+                      echo "skip=false" >> $GITHUB_OUTPUT
+                  fi
+
+            - name: Checkout code
+              if: steps.check_key.outputs.skip == 'false'
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: AI Code Review with GPT
+              if: steps.check_key.outputs.skip == 'false'
+              uses: anc95/ChatGPT-CodeReview@main
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+              with:
+                  OPENAI_API_ENDPOINT: "https://api.openai.com/v1"
+                  MODEL: "gpt-4o-mini" # More cost-effective, or use "gpt-4o" for better quality
+                  PROMPT: |
+                      You are an expert code reviewer with deep knowledge of React.js, TypeScript, Docker, and modern web development best practices.
+
+                      Review the code changes and provide:
+                      1. Code quality and best practices feedback
+                      2. Security vulnerabilities or concerns
+                      3. Performance optimization suggestions
+                      4. React.js and TypeScript specific improvements
+                      5. Docker and containerization best practices
+                      6. Test coverage recommendations
+
+                      Focus on:
+                      - Clean code principles
+                      - React hooks best practices
+                      - TypeScript type safety
+                      - Docker multi-stage builds optimization
+                      - Security best practices
+                      - Performance and bundle size
+
+                      Be constructive and provide specific examples when suggesting improvements.
+                  top_p: 1
+                  temperature: 0.3
+                  max_tokens: 2000
+                  MAX_PATCH_LENGTH: 10000
+
+    coderabbit-review:
+        name: CodeRabbit AI Review
+        runs-on: ubuntu-latest
+        if: github.event_name == 'pull_request'
+
+        steps:
+            - name: Check for OpenAI API Key
+              id: check_key
+              run: |
+                  if [ -z "${{ secrets.OPENAI_API_KEY }}" ]; then
+                      echo "skip=true" >> $GITHUB_OUTPUT
+                      echo "⚠️  OPENAI_API_KEY not set. Skipping CodeRabbit review."
+                  else
+                      echo "skip=false" >> $GITHUB_OUTPUT
+                  fi
+
+            - name: CodeRabbit AI Review
+              if: steps.check_key.outputs.skip == 'false'
+              uses: coderabbitai/ai-pr-reviewer@latest
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+              with:
+                  debug: false
+                  review_simple_changes: false
+                  review_comment_lgtm: false
+                  openai_light_model: "gpt-4o-mini"
+                  openai_heavy_model: "gpt-4o"
+                  language: "en-US"
+                  path_filters: |
+                      !dist/**
+                      !coverage/**
+                      !node_modules/**
+                      !*.md
+                      !package-lock.json
+                  system_message: |
+                      You are an expert code reviewer specializing in React.js, TypeScript, Docker, and DevOps.
+                      Focus on code quality, security, performance, and Docker/containerization best practices.
+                      Provide actionable feedback with specific examples.
+
+    review-summary:
+        name: AI Review Summary
+        runs-on: ubuntu-latest
+        needs: [ai-review, coderabbit-review]
+        if: always()
+
+        steps:
+            - name: Review summary
+              run: |
+                  echo "## 🤖 AI Code Review Summary" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "| AI Reviewer | Status |" >> $GITHUB_STEP_SUMMARY
+                  echo "|-------------|--------|" >> $GITHUB_STEP_SUMMARY
+                  echo "| ChatGPT | ${{ needs.ai-review.result }} |" >> $GITHUB_STEP_SUMMARY
+                  echo "| CodeRabbit | ${{ needs.coderabbit-review.result }} |" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+
+                  if [ "${{ needs.ai-review.result }}" = "success" ] && \
+                     [ "${{ needs.coderabbit-review.result }}" = "success" ]; then
+                    echo "✅ AI code reviews completed successfully!" >> $GITHUB_STEP_SUMMARY
+                    echo "" >> $GITHUB_STEP_SUMMARY
+                    echo "Check the PR comments for detailed feedback." >> $GITHUB_STEP_SUMMARY
+                  else
+                    echo "⚠️  Some AI reviews encountered issues." >> $GITHUB_STEP_SUMMARY
+                  fi

@@ -1,0 +1,177 @@
+name: Security Scan
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+  schedule:
+    # Run security scans every Sunday at 3 AM UTC
+    - cron: "0 3 * * 0"
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  scout-scan:
+    name: Docker Scout Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build production image for scanning
+        run: docker compose build react-prod
+
+      - name: Docker Scout - Quickview
+        uses: docker/scout-action@v1
+        continue-on-error: true
+        with:
+          command: quickview
+          image: docker-reactjs-sample
+          only-severities: critical,high,medium
+          write-comment: ${{ github.event_name == 'pull_request' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker Scout - CVEs Analysis
+        uses: docker/scout-action@v1
+        continue-on-error: true
+        with:
+          command: cves
+          image: docker-reactjs-sample
+          only-severities: critical,high
+          only-fixed: true
+          sarif-file: scout-cves.sarif
+          summary: true
+          write-comment: ${{ github.event_name == 'pull_request' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker Scout - Base Image Recommendations
+        uses: docker/scout-action@v1
+        continue-on-error: true
+        with:
+          command: recommendations
+          image: docker-reactjs-sample
+          only-refresh: false
+          only-update: false
+
+      - name: Docker Scout - Compare to Latest
+        uses: docker/scout-action@v1
+        continue-on-error: true
+        if: github.event_name == 'pull_request'
+        with:
+          command: compare
+          image: docker-reactjs-sample
+          to-latest: true
+          ignore-unchanged: true
+          only-severities: critical,high
+          write-comment: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Scout SARIF results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('scout-cves.sarif') != ''
+        with:
+          sarif_file: scout-cves.sarif
+          category: docker-scout
+
+  snyk-scan:
+    name: Snyk Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+
+    steps:
+      - name: Check for Snyk Token
+        id: check_token
+        run: |
+          if [ -z "${{ secrets.SNYK_TOKEN }}" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "⚠️  SNYK_TOKEN not set. Skipping Snyk scan."
+            echo "To enable Snyk scanning, add SNYK_TOKEN to repository secrets."
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout code
+        if: steps.check_token.outputs.skip == 'false'
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        if: steps.check_token.outputs.skip == 'false'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        if: steps.check_token.outputs.skip == 'false'
+        run: npm ci
+
+      - name: Run Snyk to check for vulnerabilities
+        if: steps.check_token.outputs.skip == 'false'
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --sarif-file-output=snyk.sarif
+
+      - name: Upload Snyk results to GitHub Security
+        if: steps.check_token.outputs.skip == 'false' && always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk.sarif
+          category: snyk
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+
+  security-summary:
+    name: Security Summary
+    runs-on: ubuntu-latest
+    needs: [scout-scan, snyk-scan]
+    if: always()
+
+    steps:
+      - name: Security scan summary
+        run: |
+          echo "## 🔒 Security Scan Summary"
+          echo ""
+          echo "| Scanner | Status |"
+          echo "|---------|--------|"
+          echo "| Docker Scout | ${{ needs.scout-scan.result }} |"
+          echo "| Snyk | ${{ needs.snyk-scan.result }} |"
+          echo ""
+
+          if [ "${{ needs.scout-scan.result }}" = "success" ] && \
+             [ "${{ needs.snyk-scan.result }}" = "success" ]; then
+            echo "✅ All security scans completed successfully!"
+            echo ""
+            echo "### What was scanned:"
+            echo "- ✅ Docker Scout: CVE vulnerabilities & base image recommendations"
+            echo "- ✅ Snyk: npm dependencies & known vulnerabilities"
+            echo "- ✅ SARIF reports uploaded to GitHub Security tab"
+          else
+            echo "⚠️  Some security scans reported issues. Please review."
+          fi

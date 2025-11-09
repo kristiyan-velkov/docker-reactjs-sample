@@ -19,8 +19,9 @@ export default defineConfig({
     css: true,
     coverage: {
       provider: "v8",
-      reporter: ["text", "lcov", "html", "json-summary"],
+      reporter: ["text", "lcov", "html", "json-summary", "json"],
       reportsDirectory: "./coverage",
+      reportOnFailure: true,
       include: ["src/**/*.{ts,tsx}"],
       exclude: [
         "node_modules/",

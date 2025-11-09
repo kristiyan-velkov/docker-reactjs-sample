@@ -12,6 +12,8 @@ jobs:
   build-production:
     name: Build Production Image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code

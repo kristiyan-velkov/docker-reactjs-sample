@@ -99,6 +99,64 @@ No configuration needed! Works out of the box.
 
 Add these secrets only if you want to enable specific features:
 
+### Security Scanning (Snyk)
+
+**Used in:** `security.yml`  
+**Purpose:** Scan npm dependencies for vulnerabilities  
+**Required:** Optional, but highly recommended
+
+| Secret       | Required    | Purpose                   |
+| ------------ | ----------- | ------------------------- |
+| `SNYK_TOKEN` | ⚠️ Optional | Snyk authentication token |
+
+**How to get Snyk token:**
+
+1. Go to https://snyk.io
+2. Sign up or log in (free tier available)
+3. Go to Account Settings → General
+4. Copy your API token
+5. Add to GitHub: Settings → Secrets → `SNYK_TOKEN`
+
+**Impact if not set:**
+
+- Security workflow will skip Snyk scan
+- Docker Scout will still run
+- You'll miss npm dependency vulnerability scanning
+
+---
+
+### AI Code Review (OpenAI)
+
+**Used in:** `ai-code-review.yml`  
+**Purpose:** AI-powered code review on pull requests  
+**Required:** Optional
+
+| Secret           | Required    | Purpose                   |
+| ---------------- | ----------- | ------------------------- |
+| `OPENAI_API_KEY` | ⚠️ Optional | OpenAI API authentication |
+
+**How to get OpenAI API key:**
+
+1. Go to https://platform.openai.com
+2. Sign up or log in
+3. Go to API Keys → Create new secret key
+4. Copy the key (you won't see it again!)
+5. Add to GitHub: Settings → Secrets → `OPENAI_API_KEY`
+
+**Cost considerations:**
+
+- Uses `gpt-4o-mini` by default (cost-effective)
+- Typical cost: $0.01-0.05 per PR review
+- Can upgrade to `gpt-4o` for better quality
+
+**Impact if not set:**
+
+- AI code review workflow will fail
+- All other workflows will continue working
+- You can delete the workflow if not needed
+
+---
+
 ### Container Registry Secrets (Optional)
 
 **Used in:** `cd.yml` (Continuous Deployment)  
@@ -403,7 +461,8 @@ git push origin test-actions
 ✅ Lint Code Quality
 ✅ Test & Coverage
 ✅ Build & Validate
-✅ Security Scan (Trivy + Docker Scout)
+✅ Security Scan (Docker Scout + Snyk if token provided)
+✅ AI Code Review (if OPENAI_API_KEY provided)
 ```
 
 ### Test Container Deployment (If configured)
@@ -424,12 +483,14 @@ git push origin v1.0.0
 
 ## 📊 Secrets Summary Table
 
-| Secret                   | Required  | Used By       | Purpose                 | Get From       |
-| ------------------------ | --------- | ------------- | ----------------------- | -------------- |
-| `GITHUB_TOKEN`           | ✅ Auto   | All workflows | GitHub API access       | Automatic      |
-| `DOCKER_USERNAME`        | ✅ For CD | cd.yml        | Docker Hub login        | hub.docker.com |
-| `DOCKERHUB_TOKEN`        | ✅ For CD | cd.yml        | Docker Hub push access  | hub.docker.com |
-| `DOCKERHUB_PROJECT_NAME` | ✅ For CD | cd.yml        | Docker Hub project name | hub.docker.com |
+| Secret                   | Required    | Used By            | Purpose                     | Get From            |
+| ------------------------ | ----------- | ------------------ | --------------------------- | ------------------- |
+| `GITHUB_TOKEN`           | ✅ Auto     | All workflows      | GitHub API access           | Automatic           |
+| `DOCKER_USERNAME`        | ✅ For CD   | cd.yml             | Docker Hub login            | hub.docker.com      |
+| `DOCKERHUB_TOKEN`        | ✅ For CD   | cd.yml             | Docker Hub push access      | hub.docker.com      |
+| `DOCKERHUB_PROJECT_NAME` | ✅ For CD   | cd.yml             | Docker Hub project name     | hub.docker.com      |
+| `SNYK_TOKEN`             | ⚠️ Optional | security.yml       | Snyk vulnerability scanning | snyk.io             |
+| `OPENAI_API_KEY`         | ⚠️ Optional | ai-code-review.yml | AI-powered code reviews     | platform.openai.com |
 
 ---
 
@@ -437,19 +498,34 @@ git push origin v1.0.0
 
 ### Level 1: Minimal (No secrets)
 
-✅ Linting with inline PR comments  
+✅ Linting with inline PR comments (ESLint + Reviewdog)  
 ✅ Testing with 100% coverage reports  
 ✅ Docker build validation  
-✅ Security scanning (Trivy + Docker Scout)  
+✅ Security scanning (Docker Scout)  
 ✅ Dependabot dependency updates  
 ✅ PR comments and summaries  
 ✅ Coverage reports in PRs (Vitest Coverage Report Action)
 
-### Level 2: With Container Registry
+### Level 2: With Security Scanning (+ SNYK_TOKEN)
 
 ✅ Everything from Level 1  
+✅ Snyk npm dependency scanning  
+✅ Comprehensive vulnerability detection  
+✅ SARIF reports in GitHub Security tab
+
+### Level 3: With AI Code Review (+ OPENAI_API_KEY)
+
+✅ Everything from Level 1 & 2  
+✅ AI-powered code review on PRs  
+✅ ChatGPT & CodeRabbit reviews  
+✅ Best practices suggestions  
+✅ Security & performance recommendations
+
+### Level 4: Full Production Setup (All secrets)
+
+✅ Everything from all levels  
 ✅ Multi-architecture image builds  
-✅ Automated deployments  
+✅ Automated deployments to Docker Hub  
 ✅ Image versioning and tagging  
 ✅ Production-ready releases
 

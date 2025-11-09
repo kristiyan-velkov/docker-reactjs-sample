@@ -1,34 +1,32 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import App from "./App";
 
 describe("App Component", () => {
-  it("renders both logos and the main heading", () => {
+  it("renders without crashing", () => {
     render(<App />);
-
-    expect(screen.getByAltText("Vite logo")).toBeInTheDocument();
-    expect(screen.getByAltText("React logo")).toBeInTheDocument();
-    expect(screen.getByText(/Vite \+ React/i)).toBeInTheDocument();
+    expect(screen.getByText(/React.js \+ Docker/i)).toBeInTheDocument();
   });
 
-  it("increments the counter when button is clicked", () => {
+  it("renders all major sections", () => {
     render(<App />);
-
-    const button = screen.getByRole("button", { name: /count is/i });
-
-    expect(button).toHaveTextContent("count is 0");
-
-    fireEvent.click(button);
-    expect(button).toHaveTextContent("count is 1");
-
-    fireEvent.click(button);
-    expect(button).toHaveTextContent("count is 2");
+    
+    // Hero section
+    expect(screen.getByText(/Sample Project/i)).toBeInTheDocument();
+    
+    // Features section
+    expect(screen.getByText(/Why This Sample\?/i)).toBeInTheDocument();
+    
+    // Quick Start section
+    expect(screen.getByText(/Quick Start/i)).toBeInTheDocument();
+    
+    // Footer section
+    expect(screen.getByText(/Created by/i)).toBeInTheDocument();
   });
 
-  it('displays the "learn more" paragraph correctly', () => {
-    render(<App />);
-
-    expect(
-      screen.getByText(/Click on the Vite and React logos to learn more/i)
-    ).toBeInTheDocument();
+  it("renders the main container with correct classes", () => {
+    const { container } = render(<App />);
+    const mainDiv = container.querySelector(".min-h-screen");
+    expect(mainDiv).toBeInTheDocument();
   });
 });
+

@@ -6,8 +6,8 @@ on:
   push:
     branches: [main]
   schedule:
-    # Run security scans daily at 2 AM UTC
-    - cron: "0 2 * * *"
+    # Run security scans every Sunday at 3 AM UTC
+    - cron: "0 3 * * 0"
   workflow_dispatch:
   workflow_call:
 
@@ -50,6 +50,10 @@ jobs:
   scout-scan:
     name: Docker Scout CVE Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      security-events: write
 
     steps:
       - name: Checkout code
@@ -61,21 +65,53 @@ jobs:
       - name: Build production image for scanning
         run: docker compose build react-prod
 
-      - name: Docker Scout CVE Scan
+      - name: Docker Scout - Quickview
         uses: docker/scout-action@v1
-        if: always()
+        with:
+          command: quickview
+          image: docker-reactjs-sample
+          only-severities: critical,high,medium
+          write-comment: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker Scout - CVEs
+        uses: docker/scout-action@v1
         with:
           command: cves
           image: docker-reactjs-sample
           only-severities: critical,high
-          exit-code: false
-          sarif-file: scout-results.sarif
+          only-fixed: true
+          sarif-file: scout-cves.sarif
+          summary: true
+          write-comment: ${{ github.event_name == 'pull_request' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Scout results
+      - name: Docker Scout - Recommendations
+        uses: docker/scout-action@v1
+        with:
+          command: recommendations
+          image: docker-reactjs-sample
+          only-refresh: false
+          only-update: false
+
+      - name: Docker Scout - Compare to Latest
+        uses: docker/scout-action@v1
+        if: github.event_name == 'pull_request'
+        with:
+          command: compare
+          image: docker-reactjs-sample
+          to-latest: true
+          ignore-unchanged: true
+          only-severities: critical,high
+          write-comment: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Scout SARIF results
         uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
-          sarif_file: "scout-results.sarif"
+          sarif_file: scout-cves.sarif
+          category: docker-scout
 
   dependency-review:
     name: Dependency Review

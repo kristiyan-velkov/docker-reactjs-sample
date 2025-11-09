@@ -29,39 +29,13 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:coverage
 
-      - name: Display coverage summary
-        if: always()
-        run: |
-          if [ -f coverage/coverage-summary.json ]; then
-            echo "📊 Coverage Summary:"
-            cat coverage/coverage-summary.json | grep -A 10 "total"
-          fi
-
-      - name: Check coverage thresholds
-        run: |
-          if [ -f coverage/coverage-summary.json ]; then
-            # Parse coverage values
-            statements=$(cat coverage/coverage-summary.json | grep -o '"statements":{"total":[0-9]*,"covered":[0-9]*,"skipped":[0-9]*,"pct":[0-9.]*' | grep -o 'pct":[0-9.]*' | cut -d':' -f2)
-            echo "Statements coverage: ${statements}%"
-            
-            # Check if coverage is 100%
-            if [ "$statements" = "100" ]; then
-              echo "✅ Perfect coverage achieved!"
-            else
-              echo "⚠️  Coverage is below 100%"
-            fi
-          fi
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+      - name: Vitest Coverage Report
+        uses: davelosert/vitest-coverage-report-action@v2
+        if: github.event_name == 'pull_request'
         with:
-          files: ./coverage/lcov.info
-          flags: unittests
-          name: codecov-umbrella
-          fail_ci_if_error: false
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          json-summary-path: ./coverage/coverage-summary.json
+          json-final-path: ./coverage/coverage-final.json
+          vite-config-path: ./vite.config.ts
 
       - name: Archive coverage report
         uses: actions/upload-artifact@v4
@@ -70,43 +44,4 @@ jobs:
           name: coverage-report-${{ github.sha }}
           path: coverage/
           retention-days: 30
-
-      - name: Comment coverage on PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            if (fs.existsSync('coverage/coverage-summary.json')) {
-              const coverage = JSON.parse(fs.readFileSync('coverage/coverage-summary.json', 'utf8'));
-              const total = coverage.total;
-              
-              const getEmoji = (pct) => {
-                if (pct === 100) return '🎯';
-                if (pct >= 80) return '✅';
-                if (pct >= 60) return '⚠️';
-                return '❌';
-              };
-              
-              const comment = `## 📊 Test Coverage Report
-              
-              | Metric | Coverage | Status |
-              |--------|----------|--------|
-              | **Statements** | ${total.statements.pct}% | ${getEmoji(total.statements.pct)} |
-              | **Branches** | ${total.branches.pct}% | ${getEmoji(total.branches.pct)} |
-              | **Functions** | ${total.functions.pct}% | ${getEmoji(total.functions.pct)} |
-              | **Lines** | ${total.lines.pct}% | ${getEmoji(total.lines.pct)} |
-              
-              **Tests:** ${total.statements.covered}/${total.statements.total} statements covered
-              
-              ${total.statements.pct === 100 ? '🎉 Perfect! 100% code coverage achieved!' : ''}
-              `;
-              
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: comment
-              });
-            }
 

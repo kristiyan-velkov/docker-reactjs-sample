@@ -17,11 +17,9 @@ jobs:
     lint:
         name: Code Quality
         uses: ./.github/workflows/lint.yml
-
     test:
         name: Tests & Coverage
         uses: ./.github/workflows/test.yml
-
     build:
         name: Build Validation
         uses: ./.github/workflows/build.yml

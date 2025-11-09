@@ -20,9 +20,7 @@ jobs:
     ai-review:
         name: AI-Powered Code Review
         runs-on: ubuntu-latest
-        if: |
-            (github.event_name == 'pull_request' || github.event_name == 'pull_request_review_comment') &&
-            github.event.repository.private == false
+        if: github.event_name == 'pull_request' || github.event_name == 'pull_request_review_comment'
 
         steps:
             - name: Check for OpenAI API Key
@@ -78,9 +76,7 @@ jobs:
     coderabbit-review:
         name: CodeRabbit AI Review
         runs-on: ubuntu-latest
-        if: |
-            github.event_name == 'pull_request' &&
-            github.event.repository.private == false
+        if: github.event_name == 'pull_request'
 
         steps:
             - name: Check for OpenAI API Key

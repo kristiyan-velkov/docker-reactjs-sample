@@ -41,32 +41,6 @@ jobs:
           vite-config-path: ./vite.config.ts
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Coverage Summary
-        if: always()
-        run: |
-          if [ -f coverage/coverage-summary.json ]; then
-            echo "## 📊 Test Coverage Report" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            
-            # Parse coverage data
-            STATEMENTS=$(jq -r '.total.statements.pct' coverage/coverage-summary.json)
-            BRANCHES=$(jq -r '.total.branches.pct' coverage/coverage-summary.json)
-            FUNCTIONS=$(jq -r '.total.functions.pct' coverage/coverage-summary.json)
-            LINES=$(jq -r '.total.lines.pct' coverage/coverage-summary.json)
-            
-            echo "| Metric | Coverage |" >> $GITHUB_STEP_SUMMARY
-            echo "|--------|----------|" >> $GITHUB_STEP_SUMMARY
-            echo "| Statements | ${STATEMENTS}% |" >> $GITHUB_STEP_SUMMARY
-            echo "| Branches | ${BRANCHES}% |" >> $GITHUB_STEP_SUMMARY
-            echo "| Functions | ${FUNCTIONS}% |" >> $GITHUB_STEP_SUMMARY
-            echo "| Lines | ${LINES}% |" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            
-            if [ "$STATEMENTS" = "100" ] && [ "$BRANCHES" = "100" ] && [ "$FUNCTIONS" = "100" ] && [ "$LINES" = "100" ]; then
-              echo "🎉 **Perfect! 100% code coverage achieved!**" >> $GITHUB_STEP_SUMMARY
-            fi
-          fi
-
       - name: Archive coverage report
         uses: actions/upload-artifact@v4
         if: always()
@@ -74,4 +48,3 @@ jobs:
           name: coverage-report-${{ github.sha }}
           path: coverage/
           retention-days: 30
-

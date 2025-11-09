@@ -28,14 +28,14 @@ jobs:
             contents: read
             pull-requests: write
             checks: write
-            
+
     test:
         name: Tests & Coverage
         uses: ./.github/workflows/test.yml
         permissions:
             contents: read
             pull-requests: write
-            
+
     build:
         name: Build Validation
         uses: ./.github/workflows/build.yml
@@ -50,6 +50,7 @@ jobs:
             contents: read
             pull-requests: write
             security-events: write
+            actions: read
 
     # Final validation step
     ci-success:

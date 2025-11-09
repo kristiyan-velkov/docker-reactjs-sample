@@ -32,6 +32,7 @@ jobs:
 
       - name: Docker Scout - Quickview
         uses: docker/scout-action@v1
+        continue-on-error: true
         with:
           command: quickview
           image: docker-reactjs-sample
@@ -41,6 +42,7 @@ jobs:
 
       - name: Docker Scout - CVEs Analysis
         uses: docker/scout-action@v1
+        continue-on-error: true
         with:
           command: cves
           image: docker-reactjs-sample
@@ -53,6 +55,7 @@ jobs:
 
       - name: Docker Scout - Base Image Recommendations
         uses: docker/scout-action@v1
+        continue-on-error: true
         with:
           command: recommendations
           image: docker-reactjs-sample
@@ -61,6 +64,7 @@ jobs:
 
       - name: Docker Scout - Compare to Latest
         uses: docker/scout-action@v1
+        continue-on-error: true
         if: github.event_name == 'pull_request'
         with:
           command: compare
@@ -73,7 +77,7 @@ jobs:
 
       - name: Upload Scout SARIF results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        if: always() && hashFiles('scout-cves.sarif') != ''
         with:
           sarif_file: scout-cves.sarif
           category: docker-scout

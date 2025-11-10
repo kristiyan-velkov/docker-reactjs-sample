@@ -162,10 +162,10 @@ Run the test suite:
 
 ```bash
 # Local testing
-npm test
+npm run test
 
 # Testing in Docker
-docker compose exec app npm test
+docker compose exec app npm run test
 ```
 
 ## 🛡️ Security

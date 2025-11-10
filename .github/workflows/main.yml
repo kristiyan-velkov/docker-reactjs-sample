@@ -132,11 +132,6 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Create ECR repository if it doesn't exist
-        run: |
-          aws ecr describe-repositories --repository-names ${{ secrets.ECR_REPOSITORY_NAME }} --region ${{ secrets.AWS_REGION }} || \
-          aws ecr create-repository --repository-name ${{ secrets.ECR_REPOSITORY_NAME }} --region ${{ secrets.AWS_REGION }}
-
       - name: Extract metadata
         id: meta
         run: |
@@ -160,6 +155,7 @@ jobs:
       - name: Deploy to Amazon ECS
         run: |
           aws ecs update-service \
-            --cluster ${{ secrets.ECS_CLUSTER_NAME }} \
-            --service ${{ secrets.ECS_SERVICE_NAME }} \
-            --force-new-deployment
+            --cluster "${{ secrets.ECS_CLUSTER_NAME }}" \
+            --service "${{ secrets.ECS_SERVICE_NAME }}" \
+            --force-new-deployment \
+            --region ${{ secrets.AWS_REGION }}

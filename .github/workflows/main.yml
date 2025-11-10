@@ -14,7 +14,6 @@ concurrency:
 env:
   NODE_VERSION: "22.11.0"
   DOCKERHUB_REPO: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}
-  DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
 
 jobs:
   # Step 1: Code Quality Checks

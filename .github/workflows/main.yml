@@ -142,7 +142,7 @@ jobs:
         id: build-image
         run: |
           IMAGE_TAG=${{ steps.meta.outputs.short_sha }}
-          ECR_IMAGE=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY_NAME }}:$IMAGE_TAG
+          ECR_IMAGE=${{ secrets.ECR_REPOSITORY_URL }}:$IMAGE_TAG
           docker build -t $ECR_IMAGE .
           echo "ECR_IMAGE=$ECR_IMAGE" >> $GITHUB_ENV
 
@@ -153,12 +153,11 @@ jobs:
         run: |
           docker push $ECR_IMAGE
 
-      - name: Force new ECS deployment
+      - name: Deploy to Amazon ECS
         # Only run on develop branch (For test purposes). To be replaced with main branch when ready.
         if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
         run: |
-          echo "Triggering ECS service update..."
           aws ecs update-service \
             --cluster ${{ secrets.ECS_CLUSTER_NAME }} \
-            --force-new-deployment \
-            --region ${{ secrets.AWS_REGION }}
+            --service ${{ secrets.ECS_SERVICE_NAME }} \
+            --force-new-deployment

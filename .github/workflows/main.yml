@@ -1,10 +1,11 @@
-name: 🚀 Docker CI/CD Pipeline
+name: Docker CI/CD Pipeline
 
 on:
   push:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -12,91 +13,55 @@ concurrency:
 
 env:
   NODE_VERSION: "22.11.0"
-  IMAGE_NAME: docker-reactjs-sample
-  DOCKER_REPO: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}
-
-permissions:
-  contents: read
-  id-token: write
+  DOCKERHUB_REPO: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}
 
 jobs:
-  # Step 1: Install dependencies and save them as an artifact
-  dependencies:
-    name: Install Dependencies & Artifacts
+  # Step 1: Code Quality Checks
+  lint:
+    name: Lint Code
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-
-      - name: Cache npm dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Upload node_modules artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: node-modules
-          path: node_modules/
-          retention-days: 1
-
-  # Step 2: Lint (Uses downloaded artifact)
-  lint:
-    name: Lint Code
-    runs-on: ubuntu-latest
-    needs: [dependencies]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Download node_modules artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: node-modules
-          path: node_modules
-
       - name: Run ESLint
         run: npm run lint
 
-  # Step 3: Test Suite (Uses downloaded artifact)
+  # Step 2: Run Tests
   test:
     name: Run Tests
     runs-on: ubuntu-latest
-    needs: [dependencies]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: npm
 
-      - name: Download node_modules artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: node-modules
-          path: node_modules
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm run test
 
       - name: Run tests with coverage
         run: npm run test:coverage
 
-      - name: Upload coverage report
+      - name: Upload coverage reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -104,82 +69,22 @@ jobs:
           path: coverage/
           retention-days: 7
 
-  # Step 4: Docker Build (Needs successful Lint and Test)
-  build:
-    name: Build Docker Image
-    runs-on: ubuntu-latest
-    needs: [lint, test]
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Extract metadata (tags, labels)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.DOCKER_REPO }}
-
-      - name: Build production image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: ./Dockerfile
-          target: production
-          tags: ${{ steps.meta.outputs.tags }}
-          build-args: |
-            NODE_VERSION=${{ env.NODE_VERSION }}
-          cache-from: type=gha,scope=${{ github.ref_name }}
-          cache-to: type=gha,mode=max,scope=${{ github.ref_name }}
-          load: true
-
-      - name: Verify image tag (e.g., latest tag for main branch)
-        run: |
-          TAGS="${{ steps.meta.outputs.tags }}"
-          echo "Tags generated: $TAGS"
-          # Simple verification for one of the tags created (e.g., the first one)
-          FIRST_TAG=$(echo "$TAGS" | head -n 1 | tr -d '\n')
-          docker images "$FIRST_TAG"
-
-  # Step 5: Deploy to Docker Hub
-  deploy:
-    name: Deploy to Docker Hub
-    runs-on: ubuntu-latest
-    needs: [build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: docker/setup-qemu-action@v3
-      - uses: docker/setup-buildx-action@v3
-
-      - name: Extract metadata (tags, labels)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.DOCKER_REPO }}
-
+      # Step 3:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push image to Docker Hub
+      # Step 4. Build and push production Docker image
+      - name: Build and push production image
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile
-          target: production
-          platforms: linux/amd64,linux/arm64
+          file: Dockerfile
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: |
-            ${{ steps.meta.outputs.tags }}
-            ${{ env.DOCKER_REPO }}:${{ github.ref_name }}
-          build-args: |
-            NODE_VERSION=${{ env.NODE_VERSION }}
-          cache-from: type=gha,scope=${{ github.ref_name }}
-          cache-to: type=gha,mode=max,scope=${{ github.ref_name }}
+            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:latest
+            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}:${{ steps.meta.outputs.SHORT_SHA }}
+          cache-from: type=local,src=/tmp/.buildx-cache

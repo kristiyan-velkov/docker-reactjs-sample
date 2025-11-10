@@ -109,7 +109,6 @@ jobs:
   #         cache-to: type=gha,mode=max
 
   # Step 4: Build and Deploy to AWS
-  # Step 2: Build and (conditionally) Deploy
   build-and-deploy:
     name: Build & Deploy to AWS ECS Fargate
     runs-on: ubuntu-latest
@@ -130,6 +129,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Extract metadata
@@ -146,16 +146,11 @@ jobs:
           docker build -t $ECR_IMAGE .
           echo "ECR_IMAGE=$ECR_IMAGE" >> $GITHUB_ENV
 
-      # Only push image & deploy when pushing to main
       - name: Push image to ECR
-        # Only run on develop branch (For test purposes). To be replaced with main branch when ready.
-        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
         run: |
           docker push $ECR_IMAGE
 
       - name: Deploy to Amazon ECS
-        # Only run on develop branch (For test purposes). To be replaced with main branch when ready.
-        if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
         run: |
           aws ecs update-service \
             --cluster ${{ secrets.ECS_CLUSTER_NAME }} \

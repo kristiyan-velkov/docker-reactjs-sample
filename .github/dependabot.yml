@@ -3,16 +3,15 @@
 
 version: 2
 updates:
-  # Enable version updates for npm dependencies
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "monthly" # Changed from weekly to monthly
+      interval: "monthly"
       day: "monday"
       time: "09:00"
-      timezone: "UTC"
-    target-branch: "develop" # Only create PRs against develop branch
-    open-pull-requests-limit: 3 # Reduced from 5 to 3
+      timezone: "Europe/Sofia"
+    target-branch: "develop"
+    open-pull-requests-limit: 2
     labels:
       - "dependencies"
       - "npm"
@@ -21,29 +20,24 @@ updates:
       prefix: "chore"
       prefix-development: "chore"
       include: "scope"
-    # Group updates for better PR management
     groups:
-      # Group ALL development dependencies into ONE PR
       development-dependencies:
         dependency-type: "development"
         update-types:
           - "minor"
           - "patch"
-          - "major" # Include major updates too
+          - "major"
       # Group ALL production dependencies into ONE PR
       production-dependencies:
         dependency-type: "production"
         update-types:
           - "patch"
           - "minor"
-      # Separate group for major production updates
       production-major-dependencies:
         dependency-type: "production"
         update-types:
           - "major"
-    # Version update strategy
     versioning-strategy: increase
-    # Ignore specific packages if needed
     ignore:
       # Ignore major version updates for stable packages
       - dependency-name: "react"
@@ -59,12 +53,12 @@ updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "monthly" # Changed from weekly to monthly
+      interval: "monthly"
       day: "monday"
       time: "09:00"
-      timezone: "UTC"
-    target-branch: "develop" # Only create PRs against develop branch
-    open-pull-requests-limit: 2 # Reduced from 3 to 2
+      timezone: "Europe/Sofia"
+    target-branch: "develop"
+    open-pull-requests-limit: 1
     labels:
       - "github-actions"
       - "dependencies"
@@ -72,7 +66,6 @@ updates:
     commit-message:
       prefix: "ci"
       include: "scope"
-    # Group ALL GitHub Actions updates into ONE PR
     groups:
       github-actions:
         patterns:
@@ -82,12 +75,12 @@ updates:
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
-      interval: "monthly" # Changed from weekly to monthly
+      interval: "monthly"
       day: "monday"
       time: "09:00"
-      timezone: "UTC"
-    target-branch: "develop" # Only create PRs against develop branch
-    open-pull-requests-limit: 2 # Reduced from 3 to 2
+      timezone: "Europe/Sofia"
+    target-branch: "develop"
+    open-pull-requests-limit: 1
     labels:
       - "docker"
       - "dependencies"
@@ -95,7 +88,6 @@ updates:
     commit-message:
       prefix: "build"
       include: "scope"
-    # Group all Docker updates into ONE PR
     groups:
       docker-images:
         patterns:

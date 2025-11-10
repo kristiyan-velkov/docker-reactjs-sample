@@ -75,7 +75,7 @@ jobs:
 
   # Step 3: Test Suite (Uses downloaded artifact)
   test:
-    name: 🧪 Run Tests
+    name: Run Tests
     runs-on: ubuntu-latest
     needs: [dependencies]
 

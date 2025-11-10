@@ -68,7 +68,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-modules
-          path: .
+          path: node_modules
 
       - name: Run ESLint
         run: npm run lint
@@ -91,7 +91,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-modules
-          path: .
+          path: node_modules
 
       - name: Run tests with coverage
         run: npm run test:coverage

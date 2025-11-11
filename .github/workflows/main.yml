@@ -159,3 +159,5 @@ jobs:
             --service "${{ secrets.ECS_SERVICE_NAME }}" \
             --force-new-deployment \
             --region ${{ secrets.AWS_REGION }}
+
+

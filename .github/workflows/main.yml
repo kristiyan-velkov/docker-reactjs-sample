@@ -136,21 +136,33 @@ jobs:
         id: meta
         run: |
           echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-          echo "date=$(date +'%Y%m%d')" >> "$GITHUB_OUTPUT"
 
       - name: Build Docker image
         id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          IMAGE_TAG=${{ steps.meta.outputs.short_sha }}
-          ECR_IMAGE=$ECR_REGISTRY/${{ secrets.ECR_REPOSITORY_NAME }}:$IMAGE_TAG
-          docker build -t $ECR_IMAGE .
-          echo "ECR_IMAGE=$ECR_IMAGE" >> $GITHUB_ENV
+          # Create multiple tags following best practices
+          IMAGE_TAG_SHA=${{ steps.meta.outputs.short_sha }}
+
+          ECR_IMAGE_SHA=$ECR_REGISTRY/${{ secrets.ECR_REPOSITORY_NAME }}:$IMAGE_TAG_SHA
+          ECR_IMAGE_LATEST=$ECR_REGISTRY/${{ secrets.ECR_REPOSITORY_NAME }}:latest
+
+          # Build with multiple tags
+          docker build \
+            -t $ECR_IMAGE_SHA \
+            -t $ECR_IMAGE_LATEST .
+
+          # Export for use in deployment (use SHA for precise tracking)
+          echo "ECR_IMAGE=$ECR_IMAGE_SHA" >> $GITHUB_ENV
 
       - name: Push image to ECR
         run: |
-          docker push $ECR_IMAGE
+          # Push all tags to ECR
+          docker push $ECR_IMAGE_SHA
+          docker push $ECR_IMAGE_LATEST
+
+          echo "✅ Pushed image with tags: $ECR_IMAGE_SHA and $ECR_IMAGE_LATEST to ECR"
 
       - name: Deploy to Amazon ECS
         run: |
@@ -159,3 +171,5 @@ jobs:
             --service "${{ secrets.ECS_SERVICE_NAME }}" \
             --force-new-deployment \
             --region ${{ secrets.AWS_REGION }}
+            
+          echo "✅ Deployed service ${{ secrets.ECS_SERVICE_NAME }} to ECS cluster ${{ secrets.ECS_CLUSTER_NAME }}"

@@ -153,8 +153,10 @@ jobs:
             -t $ECR_IMAGE_SHA \
             -t $ECR_IMAGE_LATEST .
 
-          # Export for use in deployment (use SHA for precise tracking)
+          # Export for use in next steps
           echo "ECR_IMAGE=$ECR_IMAGE_SHA" >> $GITHUB_ENV
+          echo "ECR_IMAGE_SHA=$ECR_IMAGE_SHA" >> $GITHUB_ENV
+          echo "ECR_IMAGE_LATEST=$ECR_IMAGE_LATEST" >> $GITHUB_ENV
 
       - name: Push image to ECR
         run: |

@@ -1,54 +1,60 @@
-# Ignore dependencies and build output
-node_modules/
-dist/
-out/
-.tmp/
-.cache/
+# Dependencies
+node_modules
+.pnpm-store
+.npm
+.yarn
 
-# Ignore Vite, Webpack, and React-specific build artifacts
-.vite/
-.vitepress/
+# Build outputs
+dist
+out
+.tmp
+.cache
+
+# Vite and React artifacts
+.vite
 .eslintcache
-.npm/
-coverage/
-jest/
-cypress/
-cypress/screenshots/
-cypress/videos/
-reports/
-
-# Ignore environment and config files (sensitive data)
-*.env*
-*.log
-
-# Ignore TypeScript build artifacts (if using TypeScript)
 *.tsbuildinfo
 
-# Ignore lockfiles (optional if using Docker for package installation)
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
+# Environment and secrets
+.env.*
+*.pem
+*.key
 
-# Ignore local development files
-.git/
-.gitignore
-.vscode/
-.idea/
+# Logs
+*.log
+
+# IDE and Editor files
+.idea
+.vscode
+.vs
 *.swp
+*.swo
 .DS_Store
 Thumbs.db
+.git
+.gitignore
+.editorconfig
 
-# Ignore Docker-related files (to avoid copying unnecessary configs)
-Dockerfile
+# Docker
+Dockerfile*
+compose.yaml
 .dockerignore
-docker-compose.yml
-docker-compose.override.yml
 
-# Ignore build-specific cache files
-*.lock
+# CI/CD and Tools
+.github
+Taskfile.yml
 
-# Ignore AI generated files
+# Documentation and Assets
+*.md
+images/
+
+# Test files
+**/*.test.ts
+**/*.test.tsx
+src/setupTests.ts
+
+
+# AI generated files
 .ai/
 .ai-temp/
 .cursor/

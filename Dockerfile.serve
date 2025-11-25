@@ -34,16 +34,16 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 # Install the Vercel "serve" package globally to serve static files
-RUN npm install -g serve
+RUN npm install -g serve@14.2.5
+
+# Copy the built production files from the build stage
+COPY --chown=node:node --from=build /app/dist /app/dist
 
 # Drop root privileges and run as the non-root "node" user
 USER node
-
-# Copy the built production files from the build stage
-COPY --from=build /app/dist /app/build
 
 # Expose the port where the static server will run
 EXPOSE 8080
 
 # Start the static server to serve the built React app
-CMD ["serve", "-s", "build", "-l", "8080"]
+CMD ["serve", "-s", "dist", "-l", "8080"]

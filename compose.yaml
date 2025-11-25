@@ -13,7 +13,7 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     image: docker-reactjs-sample-dev
-    container_name: reactjs-sample-app-prod
+    container_name: reactjs-sample-app-dev
     ports:
       - "5173:5173"
     develop:

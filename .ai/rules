@@ -1,0 +1,136 @@
+# Docker Best Practices Rules
+
+When creating or modifying Dockerfiles, Docker Compose files, or Docker-related configurations, follow these rules:
+
+## Image Version Pinning
+
+- **ALWAYS** pin exact versions of base images. Never use `latest` or floating tags.
+- Use ARG variables for versions to allow override while maintaining defaults.
+- Example: `ARG NODE_VERSION=24.11.1-alpine` (not `node:latest` or `node:24-alpine`)
+
+## Base Image Selection
+
+- **ALWAYS** use Alpine (`-alpine`) or Slim (`-slim`) variants for smaller images and reduced attack surface.
+- Prefer Alpine for Node.js applications unless glibc compatibility is required.
+- Example: `FROM node:24.11.1-alpine` (not `FROM node:24.11.1`)
+
+## Multi-Stage Builds
+
+- **ALWAYS** use multi-stage builds for production Dockerfiles to separate build and runtime dependencies.
+- Name stages descriptively: `builder`, `runner`, `dev`, `test`, `final`.
+- Copy only necessary artifacts between stages using `--from=<stage>`.
+- Development Dockerfiles may use single-stage, but production must use multi-stage.
+
+## Non-Root User
+
+- **ALWAYS** run containers as a non-root user for security.
+- Use built-in users when available (`node`, `nginx`).
+- When creating custom users, use fixed UIDs/GIDs: `addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001`
+- Use `--chown` flag when copying files: `COPY --chown=node:node`
+- Set `USER` directive before `CMD`/`ENTRYPOINT`.
+
+## Layer Caching Optimization
+
+- **ALWAYS** copy dependency manifests (`package.json`, `package-lock.json`) before source code.
+- Use `npm ci` instead of `npm install` for reproducible installs in production.
+- Use BuildKit cache mounts: `RUN --mount=type=cache,target=/root/.npm npm ci`
+- Order instructions from least to most frequently changing.
+
+## Security Best Practices
+
+- Never hardcode secrets in Dockerfiles. Use Docker secrets, environment variables, or secret management.
+- Remove build dependencies after installation when possible.
+- Use specific `COPY` commands instead of wildcards.
+- Set `ENV NODE_ENV=production` in production images.
+- Scan images regularly for vulnerabilities.
+
+## Docker Compose Best Practices
+
+- Use unique, descriptive container names. Never reuse container names across services.
+- Pin image versions in production environments.
+- Add healthchecks for critical services.
+- Use named networks for service isolation.
+- Set appropriate restart policies (`unless-stopped` for production).
+- Avoid using `latest` tag in production.
+
+## Package Installation
+
+- Use `npm ci` for production builds (faster, more reliable, respects lock file).
+- Use `npm install` only in development Dockerfiles.
+- For global packages, pin exact versions: `npm install -g serve@14.2.5`
+- Use `--only=production` flag when installing production dependencies: `npm ci --only=production`
+
+## File Ownership
+
+- Always set proper ownership when copying files: `COPY --chown=user:group`
+- Change ownership before switching users: `RUN chown -R user:group /app` then `USER user`
+- Ensure non-root users can access necessary directories.
+
+## .dockerignore
+
+- Maintain a comprehensive `.dockerignore` file to exclude:
+  - `node_modules`, build outputs (`dist`, `build`), test files, IDE files
+  - Docker files themselves, CI/CD configs, documentation
+  - Environment files, logs, cache directories
+
+## Code Style
+
+- Use clear section comments with separators: `# =========================================`
+- Add descriptive comments explaining why, not just what.
+- Keep ARG declarations at the top of the Dockerfile.
+- Group related instructions together.
+
+## Common Mistakes to Avoid
+
+- ❌ Never use `latest` tag
+- ❌ Never run as root user
+- ❌ Never include devDependencies in production images
+- ❌ Never copy everything with `COPY . .` before installing dependencies
+- ❌ Never hardcode secrets
+- ❌ Never skip multi-stage builds for production
+- ❌ Never use `ADD` instead of `COPY`
+- ❌ Never forget to set `NODE_ENV=production` in production images
+
+## Project-Specific Standards
+
+- Node.js version: Use `24.11.1-alpine` as the default.
+- Nginx version: Use `nginxinc/nginx-unprivileged:alpine3.22` for unprivileged nginx.
+- Serve package: Pin to `serve@14.2.5` when using Vercel serve.
+- Ports: Use `8080` for production, `5173` for Vite dev server.
+- Working directory: Use `/app` as the standard working directory.
+
+## When Creating New Dockerfiles
+
+1. Start with ARG declarations for versions
+2. Use multi-stage build structure
+3. Copy dependency files first
+4. Install dependencies with cache mounts
+5. Copy source code
+6. Build application
+7. Create/use non-root user
+8. Set proper ownership
+9. Switch to non-root user
+10. Expose ports
+11. Set CMD/ENTRYPOINT
+
+## Validation Checklist
+
+Before finalizing any Dockerfile, ensure:
+
+- [ ] Base image version is pinned (no `latest`)
+- [ ] Using Alpine or Slim variant
+- [ ] Multi-stage build for production images
+- [ ] Running as non-root user
+- [ ] Layer ordering optimized for caching
+- [ ] Using `npm ci` instead of `npm install` (production)
+- [ ] BuildKit cache mounts for package managers
+- [ ] `.dockerignore` is comprehensive
+- [ ] No secrets hardcoded
+- [ ] Proper file ownership set
+- [ ] `NODE_ENV=production` set (production images)
+
+## References
+
+- See `AGENTS.md` for detailed Docker best practices documentation
+- Official Docker best practices: https://docs.docker.com/develop/develop-images/dockerfile_best-practices/
+- OWASP Docker Security: https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html

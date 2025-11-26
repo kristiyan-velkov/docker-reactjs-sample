@@ -67,43 +67,111 @@ jobs:
           retention-days: 7
 
   # Step 3: Build and Deploy (only on main branch)
+  # build-and-deploy:
+  #   name: Build & Deploy to Docker Hub
+  #   runs-on: ubuntu-latest
+  #   needs: [lint, test]
+
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+
+  #     - name: Set up QEMU
+  #       uses: docker/setup-qemu-action@v3
+
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v3
+
+  #     - name: Extract metadata
+  #       id: meta
+  #       run: |
+  #         echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+  #         echo "date=$(date +'%Y%m%d')" >> "$GITHUB_OUTPUT"
+
+  #     - name: Log in to Docker Hub
+  #       uses: docker/login-action@v3
+  #       with:
+  #         username: ${{ secrets.DOCKER_USERNAME }}
+  #         password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  #     - name: Build and push production image
+  #       uses: docker/build-push-action@v6
+  #       with:
+  #         context: .
+  #         file: Dockerfile
+  #         push: true
+  #         platforms: linux/amd64,linux/arm64
+  #         tags: |
+  #           ${{ env.DOCKERHUB_REPO }}:latest
+  #           ${{ env.DOCKERHUB_REPO }}:${{ steps.meta.outputs.short_sha }}
+  #           ${{ env.DOCKERHUB_REPO }}:${{ steps.meta.outputs.date }}
+  #         cache-from: type=gha
+  #         cache-to: type=gha,mode=max
+
+  # Step 4: Build and Deploy to AWS
   build-and-deploy:
-    name: Build & Deploy to Docker Hub
+    name: Build & Deploy to AWS ECS Fargate
     runs-on: ubuntu-latest
     needs: [lint, test]
+
+    # Only run on develop branch (For test purposes). To be replaced with main branch when ready.
+    if: github.event_name == 'push' && github.ref == 'refs/heads/develop'
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Extract metadata
         id: meta
         run: |
           echo "short_sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-          echo "date=$(date +'%Y%m%d')" >> "$GITHUB_OUTPUT"
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Build Docker image
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        run: |
+          # Create multiple tags following best practices
+          IMAGE_TAG_SHA=${{ steps.meta.outputs.short_sha }}
 
-      - name: Build and push production image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: |
-            ${{ env.DOCKERHUB_REPO }}:latest
-            ${{ env.DOCKERHUB_REPO }}:${{ steps.meta.outputs.short_sha }}
-            ${{ env.DOCKERHUB_REPO }}:${{ steps.meta.outputs.date }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          ECR_IMAGE_SHA=$ECR_REGISTRY/${{ secrets.ECR_REPOSITORY_NAME }}:$IMAGE_TAG_SHA
+          ECR_IMAGE_LATEST=$ECR_REGISTRY/${{ secrets.ECR_REPOSITORY_NAME }}:latest
+
+          # Build with multiple tags
+          docker build \
+            -t $ECR_IMAGE_SHA \
+            -t $ECR_IMAGE_LATEST .
+
+          # Export for use in next steps
+          echo "ECR_IMAGE=$ECR_IMAGE_SHA" >> $GITHUB_ENV
+          echo "ECR_IMAGE_SHA=$ECR_IMAGE_SHA" >> $GITHUB_ENV
+          echo "ECR_IMAGE_LATEST=$ECR_IMAGE_LATEST" >> $GITHUB_ENV
+
+      - name: Push image to ECR
+        run: |
+          # Push all tags to ECR
+          docker push $ECR_IMAGE_SHA
+          docker push $ECR_IMAGE_LATEST
+
+          echo "✅ Pushed image with tags: $ECR_IMAGE_SHA and $ECR_IMAGE_LATEST to ECR"
+
+      - name: Deploy to Amazon ECS
+        run: |
+          aws ecs update-service \
+            --cluster "${{ secrets.ECS_CLUSTER_NAME }}" \
+            --service "${{ secrets.ECS_SERVICE_NAME }}" \
+            --force-new-deployment \
+            --region ${{ secrets.AWS_REGION }}
+            
+          echo "✅ Deployed service ${{ secrets.ECS_SERVICE_NAME }} to ECS cluster ${{ secrets.ECS_CLUSTER_NAME }}"

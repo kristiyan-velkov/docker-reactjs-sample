@@ -1,70 +1,49 @@
-# This Dockerfile is used to serve the React.js application using the Vercel serve npm package.
+# =============================
+# Stage 1: Build the application
+# =============================
+ARG NODE_VERSION=24.11.1
 
-# =========================================
-# Stage 1: Serve the React.js Application
-# =========================================
+# Use a lightweight Node.js Alpine image for building
+FROM node:${NODE_VERSION}-alpine AS build
 
-# Define Node.js version
-ARG NODE_VERSION=24.11.0
-
-# -----------------------------------------------------------------------------
-# 1. BASE STAGE — Common setup
-# -----------------------------------------------------------------------------
-FROM node:${NODE_VERSION}-alpine AS base
-
-# Set working directory
+# Set the working directory inside the container
 WORKDIR /app
 
-# Copy dependency manifests
-COPY package*.json ./
+# Copy dependency manifests first to optimize Docker caching
+COPY package.json package-lock.json ./
 
-# -----------------------------------------------------------------------------
-# Stage 2: DEPENDENCIES STAGE — Install only production dependencies
-# -----------------------------------------------------------------------------
-FROM base AS deps
-
-# Use BuildKit cache to speed up npm installs
-RUN --mount=type=cache,target=/root/.npm \
-    npm ci --omit=dev
-
-# -----------------------------------------------------------------------------
-# Stage 3: BUILD STAGE — Install all dependencies and build the app
-# -----------------------------------------------------------------------------
-FROM base AS build
-
-# Install all dependencies (including devDependencies)
+# Install all dependencies (including devDependencies) using BuildKit cache
 RUN --mount=type=cache,target=/root/.npm \
     npm ci
 
-# Copy the rest of the project files
+# Copy the rest of the project files into the container
 COPY . .
 
-# Build the production bundle
+# Build the React.js production bundle
 RUN npm run build
 
-# -----------------------------------------------------------------------------
-# Stage 4: FINAL STAGE — Minimal runtime image
-# -----------------------------------------------------------------------------
+# =============================
+# Stage 2: Final Runtime Image
+# =============================
 FROM node:${NODE_VERSION}-alpine AS final
 
-# Set environment variables for production
+# Set production environment
 ENV NODE_ENV=production
 
-# Set working directory
+# Set working directory for the runtime container
 WORKDIR /app
 
-# Installing globally requires root access, so do this before USER node
-RUN npm install -g serve
+# Install the Vercel "serve" package globally to serve static files
+RUN npm install -g serve@14.2.5
 
+# Copy the built production files from the build stage
+COPY --chown=node:node --from=build /app/dist /app/dist
 
-# Switch to a non-root user for security
+# Drop root privileges and run as the non-root "node" user
 USER node
 
-# Copy only the built app from the build stage
-COPY --from=build /app/dist /app/build
-
-# Expose port 8080 for the static server
+# Expose the port where the static server will run
 EXPOSE 8080
 
-# Start the static file server
-CMD ["serve", "-s", "build", "-l", "8080"]
+# Start the static server to serve the built React app
+CMD ["serve", "-s", "dist", "-l", "8080"]

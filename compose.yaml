@@ -4,12 +4,16 @@ services:
       context: .
       dockerfile: Dockerfile
     image: docker-reactjs-sample
+    container_name: reactjs-sample-app-prod
     ports:
       - "8080:8080"
+
   react-dev:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    image: docker-reactjs-sample-dev
+    container_name: reactjs-sample-app-dev
     ports:
       - "5173:5173"
     develop:
@@ -17,14 +21,19 @@ services:
         - action: sync
           path: .
           target: /app
+
   react-test:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    command: ["npm", "run", "test:coverage"]
+    image: docker-reactjs-sample-test
+    container_name: reactjs-sample-app-test
+    command: ["npm", "run", "test"]
 
   react-lint:
     build:
       context: .
       dockerfile: Dockerfile.dev
+    image: docker-reactjs-sample-lint
+    container_name: reactjs-sample-app-lint
     command: ["npm", "run", "lint"]

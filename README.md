@@ -6,10 +6,6 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9.2-blue.svg)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-7.1.5-646CFF.svg)](https://vitejs.dev/)
 
-[![CI](https://github.com/kristiyan-velkov/docker-reactjs-sample/actions/workflows/ci.yml/badge.svg)](https://github.com/kristiyan-velkov/docker-reactjs-sample/actions/workflows/ci.yml)
-[![Security](https://github.com/kristiyan-velkov/docker-reactjs-sample/actions/workflows/security.yml/badge.svg)](https://github.com/kristiyan-velkov/docker-reactjs-sample/actions/workflows/security.yml)
-[![CD](https://github.com/kristiyan-velkov/docker-reactjs-sample/actions/workflows/cd.yml/badge.svg)](https://github.com/kristiyan-velkov/docker-reactjs-sample/actions/workflows/cd.yml)
-
 A comprehensive demonstration of containerizing a modern React.js application using Docker for both **development** and **production** workflows. This project showcases industry best practices for front-end containerization, including secure builds, streamlined development workflows, and optimized production delivery.
 
 Part of the [official Docker React.js sample](https://docs.docker.com/guides/reactjs/) guide.
@@ -17,7 +13,7 @@ Part of the [official Docker React.js sample](https://docs.docker.com/guides/rea
 ## 🚀 Demo
 
 <div align="center">
-  <img src="./public/demo.png" alt="React.js Docker Sample Application Demo" width="800" />
+  <img src="./images/demo.png" alt="React.js Docker Sample Application Demo" width="800" />
 </div>
 
 ## ✨ Features
@@ -166,10 +162,10 @@ Run the test suite:
 
 ```bash
 # Local testing
-npm test
+npm run test
 
 # Testing in Docker
-docker compose exec app npm test
+docker compose exec app npm run test
 ```
 
 ## 🛡️ Security

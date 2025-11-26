@@ -13,7 +13,7 @@ Part of the [official Docker React.js sample](https://docs.docker.com/guides/rea
 ## 🚀 Demo
 
 <div align="center">
-  <img src="./public/demo.png" alt="React.js Docker Sample Application Demo" width="800" />
+  <img src="./images/demo.png" alt="React.js Docker Sample Application Demo" width="800" />
 </div>
 
 ## ✨ Features

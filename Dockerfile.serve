@@ -1,7 +1,7 @@
 # =============================
 # Stage 1: Build the application
 # =============================
-ARG NODE_VERSION=24.11.1
+ARG NODE_VERSION=24.15.0
 
 # Use a lightweight Node.js Alpine image for building
 FROM node:${NODE_VERSION}-alpine AS build

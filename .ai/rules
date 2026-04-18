@@ -6,13 +6,13 @@ When creating or modifying Dockerfiles, Docker Compose files, or Docker-related 
 
 - **ALWAYS** pin exact versions of base images. Never use `latest` or floating tags.
 - Use ARG variables for versions to allow override while maintaining defaults.
-- Example: `ARG NODE_VERSION=24.14.0-alpine` (not `node:latest` or `node:24-alpine`)
+- Example: `ARG NODE_VERSION=24.15.0-alpine` (not `node:latest` or `node:24-alpine`)
 
 ## Base Image Selection
 
 - **ALWAYS** use Alpine (`-alpine`) or Slim (`-slim`) variants for smaller images and reduced attack surface.
 - Prefer Alpine for Node.js applications unless glibc compatibility is required.
-- Example: `FROM node:24.14.0-alpine` (not `FROM node:24.11.1`)
+- Example: `FROM node:24.15.0-alpine` (not `FROM node:24.11.1`)
 
 ## Multi-Stage Builds
 
@@ -93,7 +93,7 @@ When creating or modifying Dockerfiles, Docker Compose files, or Docker-related 
 
 ## Project-Specific Standards
 
-- Node.js version: Use `24.14.0-alpine` as the default.
+- Node.js version: Use `24.15.0-alpine` as the default.
 - Nginx version: Use `nginxinc/nginx-unprivileged:alpine3.22` for unprivileged nginx.
 - Serve package: Pin to `serve@14.2.5` when using Vercel serve.
 - Ports: Use `8080` for production, `5173` for Vite dev server.

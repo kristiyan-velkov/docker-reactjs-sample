@@ -24,7 +24,7 @@ Always pin exact versions of base images and dependencies to ensure reproducible
 
 ```dockerfile
 # ✅ GOOD - Pinned exact version
-ARG NODE_VERSION=24.14.0-alpine
+ARG NODE_VERSION=24.15.0-alpine
 ARG NGINX_VERSION=1.27.3-alpine3.22
 FROM node:${NODE_VERSION} AS builder
 FROM nginxinc/nginx-unprivileged:${NGINX_VERSION} AS runner
@@ -52,7 +52,7 @@ Prefer Alpine Linux or Debian Slim variants for smaller image sizes and reduced 
 
 ```dockerfile
 # ✅ GOOD - Alpine variant (smallest, ~5MB base)
-FROM node:24.14.0-alpine
+FROM node:24.15.0-alpine
 
 # ✅ GOOD - Slim variant (Debian-based, ~70MB base)
 FROM node:24.11.1-slim
@@ -90,7 +90,7 @@ Separate build dependencies from runtime dependencies to minimize final image si
 ```dockerfile
 # ✅ GOOD - Multi-stage build
 # Stage 1: Build
-FROM node:24.14.0-alpine AS builder
+FROM node:24.15.0-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -98,7 +98,7 @@ COPY . .
 RUN npm run build
 
 # Stage 2: Runtime
-FROM node:24.14.0-alpine AS runner
+FROM node:24.15.0-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/dist ./dist
@@ -108,7 +108,7 @@ USER node
 CMD ["node", "server.js"]
 
 # ❌ BAD - Single stage with all dependencies
-FROM node:24.14.0-alpine
+FROM node:24.15.0-alpine
 WORKDIR /app
 COPY . .
 RUN npm install  # Includes devDependencies
@@ -139,14 +139,14 @@ Always run containers as a non-root user to minimize security risks.
 
 ```dockerfile
 # ✅ GOOD - Using built-in non-root user
-FROM node:24.14.0-alpine
+FROM node:24.15.0-alpine
 WORKDIR /app
 COPY --chown=node:node . .
 USER node
 CMD ["node", "server.js"]
 
 # ✅ GOOD - Creating custom non-root user
-FROM node:24.14.0-alpine
+FROM node:24.15.0-alpine
 RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 WORKDIR /app
@@ -160,7 +160,7 @@ COPY --chown=nginx:nginx . /usr/share/nginx/html
 USER nginx
 
 # ❌ BAD - Running as root
-FROM node:24.14.0-alpine
+FROM node:24.15.0-alpine
 WORKDIR /app
 COPY . .
 # No USER directive = runs as root
@@ -191,7 +191,7 @@ Order Dockerfile instructions from least to most frequently changing.
 
 ```dockerfile
 # ✅ GOOD - Optimal layer ordering
-FROM node:24.14.0-alpine AS builder
+FROM node:24.15.0-alpine AS builder
 WORKDIR /app
 
 # 1. Copy dependency files first (changes infrequently)
@@ -207,7 +207,7 @@ COPY . .
 RUN npm run build
 
 # ❌ BAD - Poor layer ordering
-FROM node:24.14.0-alpine
+FROM node:24.15.0-alpine
 WORKDIR /app
 COPY . .  # Changes frequently, invalidates cache
 RUN npm install  # Re-runs every time
@@ -289,7 +289,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        NODE_VERSION: 24.14.0-alpine
+        NODE_VERSION: 24.15.0-alpine
     image: myapp:1.0.0
     container_name: myapp-prod # Unique, descriptive names
     ports:
@@ -422,19 +422,19 @@ coverage/
 FROM node:latest
 
 # ✅ GOOD
-FROM node:24.14.0-alpine
+FROM node:24.15.0-alpine
 ```
 
 ### 2. ❌ Running as Root
 
 ```dockerfile
 # ❌ BAD
-FROM node:24.14.0-alpine
+FROM node:24.15.0-alpine
 COPY . .
 CMD ["node", "server.js"]
 
 # ✅ GOOD
-FROM node:24.14.0-alpine
+FROM node:24.15.0-alpine
 COPY --chown=node:node . .
 USER node
 CMD ["node", "server.js"]
@@ -468,16 +468,16 @@ COPY . .
 
 ```dockerfile
 # ❌ BAD - Single stage with all tools
-FROM node:24.14.0-alpine
+FROM node:24.15.0-alpine
 RUN npm install
 RUN npm run build
 CMD ["node", "server.js"]
 
 # ✅ GOOD - Multi-stage
-FROM node:24.14.0-alpine AS builder
+FROM node:24.15.0-alpine AS builder
 RUN npm ci && npm run build
 
-FROM node:24.14.0-alpine
+FROM node:24.15.0-alpine
 COPY --from=builder /app/dist ./dist
 RUN npm ci --only=production
 CMD ["node", "server.js"]
@@ -543,7 +543,7 @@ Before finalizing a Dockerfile, ensure:
 # =========================================
 # Stage 1: Build
 # =========================================
-ARG NODE_VERSION=24.14.0-alpine
+ARG NODE_VERSION=24.15.0-alpine
 
 FROM node:${NODE_VERSION} AS builder
 

@@ -1,6 +1,4 @@
-/// <reference types="vitest" />
-
-import { defineConfig } from "vite";
+import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
@@ -35,7 +33,6 @@ export default defineConfig({
         "src/main.tsx",
         "src/types/**",
       ],
-      all: true,
       thresholds: {
         lines: 100,
         functions: 100,

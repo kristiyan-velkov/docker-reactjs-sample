@@ -1,7 +1,7 @@
 # =========================================
 # Stage 1: Develop the React.js Application
 # =========================================
-ARG NODE_VERSION=24.15.0-alpine
+ARG NODE_VERSION=24.22.1-alpine
 
 # Use a lightweight Node.js Alpine image for development
 FROM node:${NODE_VERSION} AS dev

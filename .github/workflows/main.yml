@@ -12,7 +12,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: "22.11.0"
+  NODE_VERSION: "22.23.4"
   DOCKERHUB_REPO: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKERHUB_PROJECT_NAME }}
 
 jobs:
